@@ -19,7 +19,7 @@ export class BookingService {
     @InjectRepository(Booking)
     private readonly bookingRepository: Repository<Booking>,
     @InjectQueue('booking-jobs')
-    private readonly bookingQueue: bull.Queue,
+    private readonly bookingQueue: bull.Queue<BookingReminderJobData>,
     private readonly webSocketService: WebSocketService,
   ) {}
 

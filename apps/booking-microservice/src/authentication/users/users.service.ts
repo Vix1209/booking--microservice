@@ -36,7 +36,7 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    // Check if email is being updated and if it's already in use
+    // Check if it's already in use
     if (updateProfileDto.email && updateProfileDto.email !== user.email) {
       const existingUser = await this.userRepository.findOne({
         where: { email: updateProfileDto.email },

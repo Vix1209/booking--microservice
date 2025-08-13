@@ -21,7 +21,7 @@ async function bootstrap() {
   const swaggerConfig = new DocumentBuilder()
     .setTitle(process.env.APP_NAME || 'API')
     .setDescription(
-      process.env.APP_DESCRIPTION || 'Quivy Giveaway API Documentation',
+      process.env.APP_DESCRIPTION || 'Booking microservice API Documentation',
     )
     .setVersion(process.env.API_VERSION || '1.0')
     .addServer('/api/v1')

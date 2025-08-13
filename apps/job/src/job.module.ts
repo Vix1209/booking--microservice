@@ -6,11 +6,13 @@ import { JobService } from './job.service';
 import { BookingReminderProcessor } from './processors/booking-reminder.processor';
 import { SharedModule } from '@shared/shared';
 import { DatabaseModule } from '@db/database/database.module';
+import { redisConfig } from 'config/redis.config';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      load: [redisConfig],
     }),
     BullModule.registerQueue({
       name: 'booking-jobs',

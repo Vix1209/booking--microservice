@@ -11,10 +11,17 @@ import { RedisConfig } from 'config/redis.config';
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => {
         const config = configService.get<RedisConfig>('redis');
-        const redisConfig = config?.url;
+        const redisUrl = config?.url;
         const defaultJobOptions = config?.default;
+
+        if (!redisUrl) {
+          throw new Error(
+            'Redis URL not configured for Bull queue. Please set REDIS_URL environment variable.',
+          );
+        }
+
         return {
-          redis: redisConfig,
+          redis: redisUrl,
           defaultJobOptions: defaultJobOptions,
         };
       },

@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RedisConfig } from 'config/redis.config';
-import Redis, { RedisOptions } from 'ioredis';
+import Redis from 'ioredis';
 
 @Injectable()
 export class RedisService {
@@ -23,12 +23,25 @@ export class RedisService {
 
     try {
       // Main client for general operations
-      const redisOptions = config?.url as RedisOptions;
+      const redisUrl = config?.url;
 
-      // Main client for general operations
-      this.client = new Redis(redisOptions);
+      if (!redisUrl) {
+        throw new Error(
+          'Redis URL not configured. Please set REDIS_URL environment variable.',
+        );
+      }
+
+      // Create Redis client with URL string
+      this.client = new Redis(redisUrl, {
+        ...config.default,
+        lazyConnect: true,
+      });
 
       this.setupEventHandlers();
+
+      // Explicitly connect
+      await this.client.connect();
+
       this.logger.log('Redis connections established successfully');
     } catch (error) {
       this.logger.error('Failed to connect to Redis', error);

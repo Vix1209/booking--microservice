@@ -7,11 +7,13 @@ import { BookingModule } from './booking/booking.module';
 import { DatabaseModule } from '@db/database/database.module';
 import { ConfigModule } from '@nestjs/config';
 import { SharedModule } from '@shared/shared';
+import { redisConfig } from 'config/redis.config';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      load: [redisConfig],
     }),
     AuthModule,
     UsersModule,

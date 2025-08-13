@@ -35,14 +35,14 @@ A comprehensive booking management system built with NestJS, featuring real-time
 ### Docker Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Docker Container                         │
-│  ┌─────────────────┐    ┌─────────────────┐               │
-│  │  Booking API    │    │   Job Service   │               │
-│  │   (Port 5000)   │    │   (Port 5001)   │               │
-│  └─────────────────┘    └─────────────────┘               │
-│                    │                       │               │
-│                    └───────────┬───────────┘               │
+┌────────────────────────────────────────────────────────────┐
+│                    Docker Container                        │
+│  ┌─────────────────┐    ┌─────────────────┐                │
+│  │  Booking API    │    │   Job Service   │                │
+│  │   (Port 5000)   │    │   (Port 5001)   │                │
+│  └─────────────────┘    └─────────────────┘                │
+│                    │                    │                  │
+│                    └───────────┬────────┘                  │
 │                                │                           │
 └────────────────────────────────┼───────────────────────────┘
                                  │
@@ -327,6 +327,12 @@ docker-compose up -d
    - Check CORS configuration
    - Verify WebSocket port is accessible
    - Check firewall settings
+
+4. **Crypto Module Issues ("crypto is not defined")**
+   - This error occurs when argon2 (used for password hashing) cannot access Node.js crypto module
+   - The Dockerfile includes necessary build dependencies (python3, make, g++, linux-headers)
+   - If running locally without Docker, ensure Node.js has crypto support enabled
+   - For Alpine Linux containers, the required build tools are automatically installed
 
 ### Logs
 ```bash

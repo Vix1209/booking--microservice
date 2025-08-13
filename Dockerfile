@@ -3,7 +3,7 @@ FROM node:18-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat python3 make g++ linux-headers
 WORKDIR /app
 
 # Copy package files
@@ -12,6 +12,7 @@ RUN npm ci --only=production && npm cache clean --force
 
 # Rebuild the source code only when needed
 FROM base AS builder
+RUN apk add --no-cache libc6-compat python3 make g++ linux-headers
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci

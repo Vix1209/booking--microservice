@@ -18,22 +18,47 @@ A comprehensive booking management system built with NestJS, featuring real-time
 ## Architecture
 
 ```
-┌─────────────────┐    ┌─────────────────┐
-│  Booking API    │    │   Job Service   │
-│   (Port 3000)   │    │   (Port 3001)   │
-└─────────────────┘    └─────────────────┘
-         │                       │
-         └───────────┬───────────┘
-                     │
-         ┌─────────────────┐
-         │     Redis       │
-         │   (Port 6379)   │
-         └─────────────────┘
-                     │
-         ┌─────────────────┐
-         │   PostgreSQL    │
-         │   (Port 5432)   │
-         └─────────────────┘
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│  Booking API    │    │   Job Service   │    │   WebSocket     │
+│   (Port 5000)   │    │   (Port 5001)   │    │   (Port 3001)   │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         └───────────┬───────────┴───────────┬───────────┘
+                     │                       │
+         ┌─────────────────┐    ┌─────────────────────────┐
+         │  Redis (Cloud)  │    │   PostgreSQL (Cloud)   │
+         │  Job Queues &   │    │     Main Database       │
+         │    Caching      │    │                         │
+         └─────────────────┘    └─────────────────────────┘
+```
+
+### Docker Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Docker Container                         │
+│  ┌─────────────────┐    ┌─────────────────┐               │
+│  │  Booking API    │    │   Job Service   │               │
+│  │   (Port 5000)   │    │   (Port 5001)   │               │
+│  └─────────────────┘    └─────────────────┘               │
+│                    │                       │               │
+│                    └───────────┬───────────┘               │
+│                                │                           │
+└────────────────────────────────┼───────────────────────────┘
+                                 │
+    ┌─────────────────┐          │          ┌─────────────────┐
+    │  Redis (Cloud)  │──────────┼──────────│ PostgreSQL      │
+    │  Job Queues &   │          │          │   (Cloud)       │
+    │    Caching      │          │          │                 │
+    └─────────────────┘          │          └─────────────────┘
+                                 │
+                        ┌─────────────────┐
+                        │   Host System   │
+                        │  Port Mapping   │
+                        │ 5000 -> 5000    │
+                        │ 5001 -> 5001    │
+                        │ 3001 -> 3001    │
+                        └─────────────────┘
 ```
 
 ## Prerequisites
@@ -54,24 +79,66 @@ A comprehensive booking management system built with NestJS, featuring real-time
 2. **Environment Setup**
    ```bash
    cp .env.example .env
-   # Edit .env file with your configuration
+   # Edit .env file with your cloud database URLs and configuration
    ```
 
-3. **Start all services**
+3. **Start the application**
    ```bash
+   # Production mode
    docker-compose up -d
+   
+   # Or use the helper script (Windows)
+   .\docker-scripts.ps1 start
+   
+   # Or use the helper script (Linux/macOS/WSL)
+   ./docker-scripts.sh start
    ```
 
-4. **Run database migrations**
-   ```bash
-   docker-compose exec booking-service npm run migration:run
-   ```
+4. **Access the application**
+   - Main API: http://localhost:5000/api/
+   - Swagger Documentation: http://localhost:5000/api
+   - Job Service: http://localhost:5001
+   - WebSocket: ws://localhost:3001
 
-5. **Access the application**
-   - Booking API: http://localhost:3000
-   - Job Service: http://localhost:3001
-   - API Documentation: http://localhost:3000/api
-   - Nginx Proxy: http://localhost:80
+## Docker Development Mode
+
+For development with hot reload:
+
+```bash
+# Start development environment
+docker-compose --profile dev up -d booking-dev
+
+# Or use the helper script
+.\docker-scripts.ps1 dev  # Windows
+./docker-scripts.sh dev   # Linux/macOS/WSL
+```
+
+## Docker Helper Scripts
+
+Use the provided scripts for common Docker operations:
+
+**Windows (PowerShell):**
+```powershell
+.\docker-scripts.ps1 [command]
+```
+
+**Linux/macOS/WSL (Bash):**
+```bash
+./docker-scripts.sh [command]
+```
+
+Available commands:
+- `build` - Build the Docker image
+- `start` - Start in production mode
+- `dev` - Start in development mode
+- `stop` - Stop the application
+- `restart` - Restart the application
+- `logs` - View application logs
+- `status` - Show container status
+- `shell` - Open shell in running container
+- `clean` - Clean up Docker resources
+
+For detailed Docker setup instructions, see [DOCKER.md](DOCKER.md).
 
 ## Local Development Setup
 
@@ -109,20 +176,18 @@ A comprehensive booking management system built with NestJS, featuring real-time
 
 | Variable | Description | Default |
 |----------|-------------|----------|
-| `DATABASE_HOST` | PostgreSQL host | localhost |
-| `DATABASE_PORT` | PostgreSQL port | 5432 |
-| `DATABASE_USERNAME` | Database username | booking_user |
-| `DATABASE_PASSWORD` | Database password | booking_password |
-| `DATABASE_NAME` | Database name | booking_db |
-| `REDIS_HOST` | Redis host | localhost |
-| `REDIS_PORT` | Redis port | 6379 |
-| `REDIS_PASSWORD` | Redis password | (empty) |
-| `REDIS_DB` | Redis database number | 0 |
-| `JWT_SECRET` | JWT signing secret | your-secret-key |
-| `JWT_EXPIRES_IN` | JWT expiration time | 24h |
-| `JOB_PORT` | Job service port | 3001 |
-| `WEBSOCKET_PORT` | WebSocket port | 3002 |
-| `WEBSOCKET_CORS_ORIGIN` | WebSocket CORS origin | http://localhost:3000 |
+| `POSTGRES_CLOUD_DB_URL` | PostgreSQL cloud database URL | postgresql://username:password@localhost:5432/quivy_db |
+| `POSTGRES_SYNC` | Enable TypeORM synchronization | true (dev), false (prod) |
+| `REDIS_URL` | Redis cloud URL | redis://localhost:6379 |
+| `JWT_SECRET_KEY` | JWT signing secret | your-jwt-secret-key |
+| `JWT_EXPIRATION_TIME` | JWT expiration time | 15m |
+| `REFRESH_JWT_SECRET_KEY` | Refresh JWT signing secret | your-refresh-jwt-secret-key |
+| `REFRESH_JWT_EXPIRATION_TIME` | Refresh JWT expiration time | 7d |
+| `PORT` | Main API service port | 5000 |
+| `JOB_PORT` | Job service port | 5001 |
+| `NODE_ENV` | Node environment | development |
+| `WS_PORT` | WebSocket port | 3001 |
+| `WS_CORS_ORIGIN` | WebSocket CORS origin | http://localhost:3000 |
 
 ## API Endpoints
 

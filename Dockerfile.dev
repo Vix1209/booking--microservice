@@ -1,0 +1,16 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Install dependencies
+COPY package*.json ./
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Expose ports
+EXPOSE 5000 5001 3001
+
+# Start in development mode with hot reload
+CMD ["npm", "run", "dev"]

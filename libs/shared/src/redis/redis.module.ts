@@ -21,7 +21,7 @@ import { RedisConfig } from 'config/redis.config';
       inject: [ConfigService],
     }),
   ],
-  providers: [RedisService],
+  providers: [RedisService, ConfigService],
   exports: [RedisService, BullModule],
 })
 export class RedisModule {}

@@ -5,6 +5,7 @@ import { JobController } from './job.controller';
 import { JobService } from './job.service';
 import { BookingReminderProcessor } from './processors/booking-reminder.processor';
 import { SharedModule } from '@shared/shared';
+import { DatabaseModule } from '@db/database/database.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { SharedModule } from '@shared/shared';
     BullModule.registerQueue({
       name: 'booking-jobs',
     }),
+    DatabaseModule,
     SharedModule,
   ],
   controllers: [JobController],

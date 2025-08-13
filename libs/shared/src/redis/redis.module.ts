@@ -12,12 +12,10 @@ import { RedisConfig } from 'config/redis.config';
       useFactory: async (configService: ConfigService) => {
         const config = configService.get<RedisConfig>('redis');
         const redisConfig = config?.url;
+        const defaultJobOptions = config?.default;
         return {
           redis: redisConfig,
-          defaultJobOptions: {
-            removeOnComplete: true,
-            removeOnFail: true,
-          },
+          defaultJobOptions: defaultJobOptions,
         };
       },
       inject: [ConfigService],

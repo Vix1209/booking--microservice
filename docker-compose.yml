@@ -54,7 +54,7 @@ services:
   # PostgreSQL Database (development only)
   postgres:
     image: postgres:15-alpine
-    container_name: booking-postgres
+    container_name: postgres-database
     environment:
       POSTGRES_DB: booking_db
       POSTGRES_USER: postgres
@@ -75,7 +75,7 @@ services:
   # Redis Cache (development only)
   redis:
     image: redis:7-alpine
-    container_name: booking-redis
+    container_name: redis-database
     command: redis-server --appendonly yes
     volumes:
       - redis_data:/data

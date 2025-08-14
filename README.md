@@ -65,7 +65,7 @@ A comprehensive booking management system built with NestJS, featuring real-time
 │  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐      │
 │  │ Nginx Prod  │    │  Booking    │    │    Job      │      │
 │  │   :80       │────│ Service Prod│    │Service Prod │      │
-│  │             │    │   :5002     │    │   :5003     │      │
+│  │             │    │   :5000     │    │   :5001     │      │
 │  └─────────────┘    └─────────────┘    └─────────────┘      │
 │         │                   │                   │           │
 │         └───────────────────┼───────────────────┘           │
@@ -118,11 +118,10 @@ cp .env.example .env
 # Start all services in production mode
 docker compose --profile prod up -d
 
-# Access the application (different ports)
+# Access the application
 # - API Endpoints: http://localhost/api/ (via nginx)
 # - Job Service: http://localhost/jobs/ (via nginx)
-# - Direct API Access: http://localhost:5002/api/
-# - Direct Job Access: http://localhost:5003/job/health
+# - Health Check: http://localhost/health
 
 # View logs
 docker compose --profile prod logs -f
@@ -136,23 +135,26 @@ docker compose --profile prod down
 ### Service Profiles
 
 **Development Profile (default)**
-
-- Local PostgreSQL and Redis containers
+- Activated by: `docker compose up` (no profile flag needed)
+- Local PostgreSQL and Redis containers included
 - Hot reload enabled with volume mounts
 - Development nginx configuration (`nginx.conf`)
-- Services run on standard ports (5000, 5001)
+- Services expose ports: 5000 (booking), 5001 (job), 80 (nginx)
 - Debug logging enabled
 - CORS enabled for development
+- Uses `nginx-dev`, `postgres`, `redis`, `booking-service`, `job-service`
 
 **Production Profile (`--profile prod`)**
-
-- External cloud databases (PostgreSQL + Redis)
+- Activated by: `docker compose --profile prod up`
+- External cloud databases (PostgreSQL + Redis) - no local DB containers
 - Optimized production builds
 - Production nginx configuration (`nginx.prod.conf`)
-- Services run on different external ports (5002, 5003)
-- Enhanced security headers
-- Stricter rate limiting
-- Production logging
+- Only nginx exposes port 80 externally, services run internally
+- Enhanced security headers and attack protection
+- Stricter rate limiting (5r/s for API, 2r/s for auth)
+- Production logging and error handling
+- Hidden server tokens and version information
+- Uses `nginx-prod`, `booking-service-prod`, `job-service-prod`
 
 ### Service Routing
 
@@ -169,9 +171,9 @@ docker compose --profile prod down
 
 | Route     | Service              | Internal Port | External Port | Description               |
 | --------- | -------------------- | ------------- | ------------- | ------------------------- |
-| `/api/*`  | booking-service-prod | 5000          | 5002          | Main API endpoints        |
-| `/jobs/*` | job-service-prod     | 5001          | 5003          | Background job management |
-| `/ws/*`   | booking-service-prod | 5000          | 5002          | WebSocket connections     |
+| `/api/*`  | booking-service-prod | 5000          | 80            | Main API endpoints        |
+| `/jobs/*` | job-service-prod     | 5001          | 80            | Background job management |
+| `/ws/*`   | booking-service-prod | 5000          | 80            | WebSocket connections     |
 | `/health` | nginx                | -             | 80            | Health check endpoint     |
 
 ## 📝 Docker Commands
@@ -234,16 +236,16 @@ docker compose --profile prod down
 docker compose exec booking-service npm run migration:run
 
 # Access PostgreSQL CLI
-docker compose exec postgres psql -U booking_user -d booking_db
+docker compose exec postgres psql -U postgres -d booking_db
 
 # Access Redis CLI
 docker compose exec redis redis-cli
 
 # Backup database
-docker compose exec postgres pg_dump -U booking_user booking_db > backup.sql
+docker compose exec postgres pg_dump -U postgres booking_db > backup.sql
 
 # Restore database
-docker compose exec -T postgres psql -U booking_user booking_db < backup.sql
+docker compose exec -T postgres psql -U postgres booking_db < backup.sql
 ```
 
 ### Debugging
@@ -258,9 +260,8 @@ curl http://localhost/health                    # Nginx health
 curl http://localhost/api/                      # Booking API
 curl http://localhost/jobs/health               # Job service health
 
-# Direct service access (production)
-curl http://localhost:5002/api/                 # Direct booking API
-curl http://localhost:5003/job/health           # Direct job service
+# Note: In production, services are only accessible through nginx proxy
+# Direct service access is not exposed externally for security
 
 # Monitor resource usage
 docker stats
@@ -281,7 +282,7 @@ docker inspect booking-service
 2. **Start PostgreSQL and Redis**
 
    ```bash
-   docker-compose up postgres redis -d
+   docker compose up
    ```
 
 3. **Environment configuration**
@@ -311,9 +312,9 @@ docker inspect booking-service
 
 | Variable                      | Description                    | Default                                                |
 | ----------------------------- | ------------------------------ | ------------------------------------------------------ |
-| `DATABASE_URL`                | PostgreSQL cloud database URL  | postgresql://username:password@localhost:5432/quivy_db |
+| `DATABASE_URL`                | PostgreSQL database URL        | postgresql://postgres:password@postgres:5432/booking_db |
 | `POSTGRES_SYNC`               | Enable TypeORM synchronization | true (dev), false (prod)                               |
-| `REDIS_URL`                   | Redis cloud URL                | redis://localhost:6379                                 |
+| `REDIS_URL`                   | Redis URL                      | redis://localhost:6379                                 |
 | `JWT_SECRET_KEY`              | JWT signing secret             | your-jwt-secret-key                                    |
 | `JWT_EXPIRATION_TIME`         | JWT expiration time            | 15m                                                    |
 | `REFRESH_JWT_SECRET_KEY`      | Refresh JWT signing secret     | your-refresh-jwt-secret-key                            |
@@ -544,13 +545,16 @@ docker compose --profile prod up -d
 ### Production Security Checklist
 
 - [ ] Update all default passwords in `.env`
-- [ ] Set strong JWT_SECRET_KEY
-- [ ] Configure CORS_ENABLED=false
-- [ ] Set SWAGGER_ENABLED=false
-- [ ] Review rate limiting settings
-- [ ] Test security headers
+- [ ] Set strong JWT_SECRET_KEY (64+ characters)
+- [ ] Set strong REFRESH_JWT_SECRET_KEY
+- [ ] Configure proper DATABASE_URL for cloud database
+- [ ] Configure proper REDIS_URL for cloud Redis
+- [ ] Set NODE_ENV=production
+- [ ] Review nginx rate limiting (5r/s API, 2r/s auth)
+- [ ] Test security headers and CSP policies
 - [ ] Implement SSL/TLS certificates
 - [ ] Set up monitoring and alerting
+- [ ] Verify attack pattern blocking is working
 
 ### Security Features
 
@@ -558,9 +562,12 @@ docker compose --profile prod up -d
 - Password hashing with bcrypt
 - Input validation with class-validator
 - SQL injection prevention with TypeORM
-- Rate limiting via Nginx
+- Rate limiting via Nginx (dev: 10r/s API, 5r/s auth; prod: 5r/s API, 2r/s auth)
 - CORS configuration
-- Security headers
+- Security headers (enhanced in production)
+- Attack pattern blocking (production only)
+- Hidden server information (production only)
+- Connection limiting (production only)
 
 ## 🚀 Performance Optimizations
 
@@ -617,9 +624,11 @@ docker compose ps
 docker compose logs postgres
 docker compose logs redis
 
-# Verify credentials match
-# PostgreSQL: booking_user:booking_password
-# Connection string should match POSTGRES_USER/POSTGRES_PASSWORD
+# Verify credentials match docker-compose.yml:
+# POSTGRES_DB: booking_db
+# POSTGRES_USER: postgres  
+# POSTGRES_PASSWORD: password
+# DATABASE_URL: postgresql://postgres:password@postgres:5432/booking_db
 
 # Reset database volumes
 docker compose down -v
@@ -634,7 +643,7 @@ netstat -tulpn | grep :80
 netstat -tulpn | grep :5000
 
 # Development uses: 80, 5000, 5001
-# Production uses: 80, 5002, 5003
+# Production uses: 80 (nginx only, services run internally)
 ```
 
 **Hot reload not working (Development)**
@@ -695,8 +704,8 @@ docker compose --profile prod config
 | Dev         | Booking API | `http://localhost/api/`            | Swagger UI         |
 | Dev         | Job Service | `http://localhost/jobs/health`     | JSON health status |
 | Prod        | Nginx       | `http://localhost/health`          | `healthy`          |
-| Prod        | Booking API | `http://localhost:5002/api/`       | API response       |
-| Prod        | Job Service | `http://localhost:5003/job/health` | JSON health status |
+| Prod        | Booking API | `http://localhost/api/`            | API response       |
+| Prod        | Job Service | `http://localhost/jobs/health`     | JSON health status |
 
 ### Logs
 

@@ -1,4 +1,4 @@
-import { applyDecorators, UseGuards } from 'nestjs/common';
+import { applyDecorators } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiQuery,

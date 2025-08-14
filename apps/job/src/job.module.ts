@@ -6,6 +6,7 @@ import { BookingReminderProcessor } from './processors/booking-reminder.processo
 import { SharedModule } from '@shared/shared';
 import { DatabaseModule } from '@db/database/database.module';
 import { redisConfig } from 'config/redis.config';
+import { JobService } from './job.service';
 
 @Module({
   imports: [
@@ -20,6 +21,6 @@ import { redisConfig } from 'config/redis.config';
     SharedModule,
   ],
   controllers: [JobController],
-  providers: [BookingReminderProcessor],
+  providers: [BookingReminderProcessor, JobService],
 })
 export class JobModule {}

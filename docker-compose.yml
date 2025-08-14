@@ -12,7 +12,7 @@ services:
   # Nginx Reverse Proxy - Development
   nginx-dev:
     image: nginx:alpine
-    container_name: booking-nginx-dev
+    container_name: nginx-dev
     ports:
       - '80:80'
     volumes:
@@ -33,7 +33,7 @@ services:
   # Nginx Reverse Proxy - Production  
   nginx-prod:
     image: nginx:alpine
-    container_name: booking-nginx-prod
+    container_name: nginx-prod
     ports:
       - '80:80'
     volumes:

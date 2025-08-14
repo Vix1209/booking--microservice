@@ -34,117 +34,241 @@ A comprehensive booking management system built with NestJS, featuring real-time
 
 ### Docker Architecture
 
+#### Development Environment
+
 ```
-┌────────────────────────────────────────────────────────────┐
-│                    Docker Container                        │
-│  ┌─────────────────┐    ┌─────────────────┐                │
-│  │  Booking API    │    │   Job Service   │                │
-│  │   (Port 5000)   │    │   (Port 5001)   │                │
-│  └─────────────────┘    └─────────────────┘                │
-│                    │                    │                  │
-│                    └───────────┬────────┘                  │
-│                                │                           │
-└────────────────────────────────┼───────────────────────────┘
-                                 │
-    ┌─────────────────┐          │          ┌─────────────────┐
-    │  Redis (Cloud)  │──────────┼──────────│ PostgreSQL      │
-    │  Job Queues &   │          │          │   (Cloud)       │
-    │    Caching      │          │          │                 │
-    └─────────────────┘          │          └─────────────────┘
-                                 │
-                        ┌─────────────────┐
-                        │   Host System   │
-                        │  Port Mapping   │
-                        │ 5000 -> 5000    │
-                        │ 5001 -> 5001    │
-                        │ 3001 -> 3001    │
-                        └─────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                    Docker Network                           │
+│                                                             │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐      │
+│  │   Nginx     │    │  Booking    │    │    Job      │      │
+│  │   :80       │────│  Service    │    │  Service    │      │
+│  │             │    │   :5000     │    │   :5001     │      │
+│  └─────────────┘    └─────────────┘    └─────────────┘      │
+│         │                   │                   │           │
+│         └───────────────────┼───────────────────┘           │
+│                             │                               │
+│  ┌─────────────┐    ┌─────────────┐                         │
+│  │ PostgreSQL  │    │    Redis    │                         │
+│  │   :5432     │    │   :6379     │                         │
+│  │             │    │             │                         │
+│  └─────────────┘    └─────────────┘                         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### Production Environment
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Docker Network                           │
+│                                                             │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐      │
+│  │ Nginx Prod  │    │  Booking    │    │    Job      │      │
+│  │   :80       │────│ Service Prod│    │Service Prod │      │
+│  │             │    │   :5002     │    │   :5003     │      │
+│  └─────────────┘    └─────────────┘    └─────────────┘      │
+│         │                   │                   │           │
+│         └───────────────────┼───────────────────┘           │
+│                             │                               │
+│                    ┌─────────────────┐                      │
+│                    │ External Cloud  │                      │
+│                    │   Databases     │                      │
+│                    │ (PostgreSQL +   │                      │
+│                    │     Redis)      │                      │
+│                    └─────────────────┘                      │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ## Prerequisites
 
-- Node.js 18+
-- Docker and Docker Compose
+- Docker Engine 20.10+
+- Docker Compose 2.0+
+- 4GB+ available RAM
+- 2GB+ available disk space
+- Node.js 18+ (for local development)
 - PostgreSQL 15+ (if running locally)
 - Redis 7+ (if running locally)
 
-## Quick Start with Docker
+## 🚀 Quick Start with Docker
 
-1. **Clone the repository**
-
-   ```bash
-   git clone <repository-url>
-   cd booking-microservice
-   ```
-
-2. **Environment Setup**
-
-   ```bash
-   cp .env.example .env
-   # Edit .env file with your cloud database URLs and configuration
-   ```
-
-3. **Start the application**
-
-   ```bash
-   # Production mode
-   docker-compose up -d
-
-   # Or use the helper script (Windows)
-   .\docker-scripts.ps1 start
-
-   # Or use the helper script (Linux/macOS/WSL)
-   ./docker-scripts.sh start
-   ```
-
-4. **Access the application**
-   - Main API: http://localhost:5000/api/
-   - Swagger Documentation: http://localhost:5000/api
-   - Job Service: http://localhost:5001
-   - WebSocket: ws://localhost:3001
-
-## Docker Development Mode
-
-For development with hot reload:
+### Development Mode (with local databases)
 
 ```bash
-# Start development environment
-docker-compose --profile dev up -d booking-dev
+# Clone the repository
+git clone <repository-url>
+cd booking-microservice
 
-# Or use the helper script
-.\docker-scripts.ps1 dev  # Windows
-./docker-scripts.sh dev   # Linux/macOS/WSL
+# Start all services in development mode
+docker compose up
+
+# Access the application
+# - API Endpoints: http://localhost/api/
+# - Job Service: http://localhost/jobs/
+# - WebSocket: http://localhost/ws/
+# - Health Check: http://localhost/health
 ```
 
-## Docker Helper Scripts
-
-Use the provided scripts for common Docker operations:
-
-**Windows (PowerShell):**
-
-```powershell
-.\docker-scripts.ps1 [command]
-```
-
-**Linux/macOS/WSL (Bash):**
+### Production Mode (with cloud databases)
 
 ```bash
-./docker-scripts.sh [command]
+# Environment Setup
+cp .env.example .env
+# Edit .env file with your cloud database URLs and configuration
+
+# Start all services in production mode
+docker compose --profile prod up -d
+
+# Access the application (different ports)
+# - API Endpoints: http://localhost/api/ (via nginx)
+# - Job Service: http://localhost/jobs/ (via nginx)
+# - Direct API Access: http://localhost:5002/api/
+# - Direct Job Access: http://localhost:5003/job/health
+
+# View logs
+docker compose --profile prod logs -f
+
+# Stop services
+docker compose --profile prod down
 ```
 
-Available commands:
+## 🔧 Docker Configuration
 
-- `build` - Build the Docker image
-- `start` - Start in production mode
-- `dev` - Start in development mode
-- `stop` - Stop the application
-- `restart` - Restart the application
-- `logs` - View application logs
-- `status` - Show container status
-- `shell` - Open shell in running container
-- `clean` - Clean up Docker resources
+### Service Profiles
 
-For detailed Docker setup instructions, see [DOCKER.md](DOCKER.md).
+**Development Profile (default)**
+
+- Local PostgreSQL and Redis containers
+- Hot reload enabled with volume mounts
+- Development nginx configuration (`nginx.conf`)
+- Services run on standard ports (5000, 5001)
+- Debug logging enabled
+- CORS enabled for development
+
+**Production Profile (`--profile prod`)**
+
+- External cloud databases (PostgreSQL + Redis)
+- Optimized production builds
+- Production nginx configuration (`nginx.prod.conf`)
+- Services run on different external ports (5002, 5003)
+- Enhanced security headers
+- Stricter rate limiting
+- Production logging
+
+### Service Routing
+
+#### Development (nginx.conf)
+
+| Route     | Service         | Internal Port | Description               |
+| --------- | --------------- | ------------- | ------------------------- |
+| `/api/*`  | booking-service | 5000          | Main API endpoints        |
+| `/jobs/*` | job-service     | 5001          | Background job management |
+| `/ws/*`   | booking-service | 5000          | WebSocket connections     |
+| `/health` | nginx           | -             | Health check endpoint     |
+
+#### Production (nginx.prod.conf)
+
+| Route     | Service              | Internal Port | External Port | Description               |
+| --------- | -------------------- | ------------- | ------------- | ------------------------- |
+| `/api/*`  | booking-service-prod | 5000          | 5002          | Main API endpoints        |
+| `/jobs/*` | job-service-prod     | 5001          | 5003          | Background job management |
+| `/ws/*`   | booking-service-prod | 5000          | 5002          | WebSocket connections     |
+| `/health` | nginx                | -             | 80            | Health check endpoint     |
+
+## 📝 Docker Commands
+
+### Development Workflow
+
+```bash
+# Start development environment (default profile)
+docker compose up
+
+# Start in background
+docker compose up -d
+
+# View logs
+docker compose logs -f
+
+# View specific service logs
+docker compose logs -f booking-service
+docker compose logs -f job-service
+docker compose logs -f postgres
+docker compose logs -f redis
+
+# Stop services
+docker compose down
+
+# Rebuild and start
+docker compose up --build
+
+# Remove volumes (reset databases)
+docker compose down -v
+```
+
+### Production Workflow
+
+```bash
+# Build production images
+docker compose --profile prod build
+
+# Start production environment
+docker compose --profile prod up -d
+
+# Check service status
+docker compose --profile prod ps
+
+# View production logs
+docker compose --profile prod logs -f
+
+# Update production deployment
+docker compose --profile prod pull
+docker compose --profile prod up -d --build
+
+# Stop production services
+docker compose --profile prod down
+```
+
+### Database Management (Development Only)
+
+```bash
+# Run database migrations
+docker compose exec booking-service npm run migration:run
+
+# Access PostgreSQL CLI
+docker compose exec postgres psql -U booking_user -d booking_db
+
+# Access Redis CLI
+docker compose exec redis redis-cli
+
+# Backup database
+docker compose exec postgres pg_dump -U booking_user booking_db > backup.sql
+
+# Restore database
+docker compose exec -T postgres psql -U booking_user booking_db < backup.sql
+```
+
+### Debugging
+
+```bash
+# Access service shell
+docker compose exec booking-service sh
+docker compose exec job-service sh
+
+# Check service health endpoints
+curl http://localhost/health                    # Nginx health
+curl http://localhost/api/                      # Booking API
+curl http://localhost/jobs/health               # Job service health
+
+# Direct service access (production)
+curl http://localhost:5002/api/                 # Direct booking API
+curl http://localhost:5003/job/health           # Direct job service
+
+# Monitor resource usage
+docker stats
+
+# View container details
+docker compose ps
+docker inspect booking-service
+```
 
 ## Local Development Setup
 
@@ -283,7 +407,51 @@ npm run migration:run
 npm run migration:revert
 ```
 
-## Monitoring and Health Checks
+## 📊 Monitoring and Health Checks
+
+### Built-in Health Checks
+
+```bash
+# Service health (both environments)
+curl http://localhost/health
+
+# Development specific
+curl http://localhost/api/                      # Swagger UI
+curl http://localhost/jobs/health               # Job metrics
+
+# Production specific
+curl http://localhost:5002/api/                 # Direct API
+curl http://localhost:5003/job/health           # Direct job service
+```
+
+### Docker Health Status
+
+```bash
+# Check container health
+docker compose ps
+docker compose --profile prod ps
+
+# View health check logs
+docker inspect --format='{{json .State.Health}}' booking-service
+docker inspect --format='{{json .State.Health}}' booking-service-prod
+```
+
+### Production Monitoring
+
+```bash
+# Container resource usage
+docker stats
+
+# Service logs
+docker compose --profile prod logs --tail=100 -f
+
+# Nginx access logs
+docker compose --profile prod exec nginx-prod tail -f /var/log/nginx/access.log
+
+# Application logs
+docker compose --profile prod logs -f booking-service-prod
+docker compose --profile prod logs -f job-service-prod
+```
 
 ### Health Check Endpoints
 
@@ -295,16 +463,52 @@ npm run migration:revert
 - Job Queue Metrics: `GET /jobs/metrics`
 - Queue Statistics: `GET /jobs/stats`
 
-## Production Deployment
+## 🔄 Deployment Workflow
+
+### Development Setup
+
+```bash
+# Clone repository
+git clone <repository-url>
+cd booking-microservice
+
+# Start development environment
+docker compose up -d
+
+# Run initial setup (if needed)
+docker compose exec booking-service npm run migration:run
+
+# Development ready!
+echo "Development environment ready at http://localhost"
+```
+
+### Production Deployment
+
+```bash
+# Prepare environment file
+cp .env.example .env
+# Edit .env with production values
+
+# Build and deploy
+docker compose --profile prod build
+docker compose --profile prod up -d
+
+# Verify deployment
+curl http://localhost/health
+docker compose --profile prod ps
+
+# Production ready!
+echo "Production environment ready at http://localhost"
+```
 
 ### Docker Production Build
 
 ```bash
 # Build production images
-docker-compose build
+docker compose --profile prod build
 
 # Deploy to production
-docker-compose up -d
+docker compose --profile prod up -d
 ```
 
 ### Environment Considerations
@@ -316,7 +520,39 @@ docker-compose up -d
 - Set up monitoring and logging
 - Configure backup strategies
 
-## Security Features
+## 🔒 Security Considerations
+
+### Development
+
+- Uses standard passwords (for convenience)
+- CORS enabled for all origins
+- Debug logging enabled
+- Swagger UI accessible
+- No SSL/TLS required
+
+### Production
+
+- **MUST** update `.env` with secure credentials
+- **MUST** use strong JWT secrets (64+ characters)
+- **MUST** configure proper CORS origins
+- Enhanced security headers in nginx
+- Stricter rate limiting
+- Hidden server information
+- **SHOULD** add SSL/TLS termination
+- **SHOULD** implement proper monitoring
+
+### Production Security Checklist
+
+- [ ] Update all default passwords in `.env`
+- [ ] Set strong JWT_SECRET_KEY
+- [ ] Configure CORS_ENABLED=false
+- [ ] Set SWAGGER_ENABLED=false
+- [ ] Review rate limiting settings
+- [ ] Test security headers
+- [ ] Implement SSL/TLS certificates
+- [ ] Set up monitoring and alerting
+
+### Security Features
 
 - JWT-based authentication
 - Password hashing with bcrypt
@@ -326,7 +562,25 @@ docker-compose up -d
 - CORS configuration
 - Security headers
 
-## Performance Optimizations
+## 🚀 Performance Optimizations
+
+### Development
+
+- Use `.dockerignore` to exclude unnecessary files
+- Mount only necessary directories for hot reload
+- Use development Docker target for faster builds
+- Keep development databases small
+
+### Production
+
+- Use production-optimized images
+- Enable gzip compression (handled by nginx)
+- Configure proper resource limits
+- Use external databases for scalability
+- Implement connection pooling
+- Use Redis for caching and sessions
+
+### General Optimizations
 
 - Database indexing for optimal query performance
 - Redis caching for frequently accessed data
@@ -335,9 +589,82 @@ docker-compose up -d
 - Efficient pagination for large datasets
 - Background job processing for non-blocking operations
 
-## Troubleshooting
+## 🔍 Troubleshooting
 
 ### Common Issues
+
+**Services won't start**
+
+```bash
+# Check logs for errors
+docker compose logs
+
+# Check specific profile
+docker compose --profile prod logs
+
+# Rebuild containers
+docker compose down
+docker compose up --build
+```
+
+**Database connection errors (Development)**
+
+```bash
+# Ensure databases are healthy
+docker compose ps
+
+# Check database logs
+docker compose logs postgres
+docker compose logs redis
+
+# Verify credentials match
+# PostgreSQL: booking_user:booking_password
+# Connection string should match POSTGRES_USER/POSTGRES_PASSWORD
+
+# Reset database volumes
+docker compose down -v
+docker compose up
+```
+
+**Port conflicts**
+
+```bash
+# Check what's using ports
+netstat -tulpn | grep :80
+netstat -tulpn | grep :5000
+
+# Development uses: 80, 5000, 5001
+# Production uses: 80, 5002, 5003
+```
+
+**Hot reload not working (Development)**
+
+```bash
+# Ensure volume mounts are correct
+docker compose config
+
+# Check file permissions
+ls -la
+
+# Restart development services
+docker compose restart booking-service job-service
+```
+
+**Production services not starting**
+
+```bash
+# Verify .env file exists and has correct values
+cat .env
+
+# Check if external databases are accessible
+# Test PostgreSQL connection
+# Test Redis connection
+
+# Check production profile
+docker compose --profile prod config
+```
+
+**Legacy Issues**
 
 1. **Database Connection Issues**
    - Verify PostgreSQL is running
@@ -360,15 +687,32 @@ docker-compose up -d
    - If running locally without Docker, ensure Node.js has crypto support enabled
    - For Alpine Linux containers, the required build tools are automatically installed
 
+### Health Checks
+
+| Environment | Service     | Endpoint                           | Expected Response  |
+| ----------- | ----------- | ---------------------------------- | ------------------ |
+| Dev         | Nginx       | `http://localhost/health`          | `healthy`          |
+| Dev         | Booking API | `http://localhost/api/`            | Swagger UI         |
+| Dev         | Job Service | `http://localhost/jobs/health`     | JSON health status |
+| Prod        | Nginx       | `http://localhost/health`          | `healthy`          |
+| Prod        | Booking API | `http://localhost:5002/api/`       | API response       |
+| Prod        | Job Service | `http://localhost:5003/job/health` | JSON health status |
+
 ### Logs
 
 ```bash
 # View application logs
-docker-compose logs booking-service
-docker-compose logs job-service
+docker compose logs booking-service
+docker compose logs job-service
 
 # Follow logs in real-time
-docker-compose logs -f booking-service
+docker compose logs -f booking-service
+
+# Production logs
+docker compose --profile prod logs --tail=100 -f
+
+# Nginx access logs
+docker compose --profile prod exec nginx-prod tail -f /var/log/nginx/access.log
 ```
 
 ## Contributing

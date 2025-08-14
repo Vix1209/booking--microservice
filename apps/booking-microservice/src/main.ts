@@ -35,6 +35,10 @@ async function bootstrap() {
       { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
       'JWT',
     )
+    .addBearerAuth(
+      { type: 'http', scheme: 'bearer', bearerFormat: 'RefreshJWT' },
+      'RefreshJWT',
+    )
     .build();
 
   // Create Swagger document with custom options to prevent duplicate tags

@@ -24,23 +24,26 @@ import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingDto } from './dto/update-booking.dto';
 import { JwtGuard } from '../authentication/auth/guard/jwt.guard';
 import { Booking, BookingStatus } from './entities/booking.entity';
+import {
+  CreateBookingDocs,
+  DeleteSingleBookingDocs,
+  FindBookingDocs,
+  FindPastBookingDocs,
+  FindSingleBookingDocs,
+  FindUpcomingBookingDocs,
+  UpdateBookingStatusDocs,
+  UpdateSingleBookingDocs,
+} from './docs/booking.docs';
 
 @ApiTags('Bookings')
-@ApiBearerAuth()
+@ApiBearerAuth('JWT')
 @UseGuards(JwtGuard)
 @Controller('booking')
 export class BookingController {
   constructor(private readonly bookingService: BookingService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create a new booking' })
-  @ApiResponse({
-    status: 201,
-    description: 'Booking created successfully',
-    type: Booking,
-  })
-  @ApiResponse({ status: 400, description: 'Bad request' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @CreateBookingDocs()
   async create(
     @Body() createBookingDto: CreateBookingDto,
     @Request() req: any,
@@ -49,23 +52,7 @@ export class BookingController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all bookings for the authenticated user' })
-  @ApiQuery({
-    name: 'page',
-    required: false,
-    type: Number,
-    description: 'Page number',
-  })
-  @ApiQuery({
-    name: 'limit',
-    required: false,
-    type: Number,
-    description: 'Items per page',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Bookings retrieved successfully',
-  })
+  @FindBookingDocs()
   async findAll(
     @Request() req: any,
     @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
@@ -75,18 +62,7 @@ export class BookingController {
   }
 
   @Get('upcoming')
-  @ApiOperation({ summary: 'Get upcoming bookings' })
-  @ApiQuery({
-    name: 'limit',
-    required: false,
-    type: Number,
-    description: 'Number of bookings to return',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Upcoming bookings retrieved successfully',
-    type: [Booking],
-  })
+  @FindUpcomingBookingDocs()
   async findUpcoming(
     @Request() req: any,
     @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 10,
@@ -95,18 +71,7 @@ export class BookingController {
   }
 
   @Get('past')
-  @ApiOperation({ summary: 'Get past bookings' })
-  @ApiQuery({
-    name: 'limit',
-    required: false,
-    type: Number,
-    description: 'Number of bookings to return',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Past bookings retrieved successfully',
-    type: [Booking],
-  })
+  @FindPastBookingDocs()
   async findPast(
     @Request() req: any,
     @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 10,
@@ -115,13 +80,7 @@ export class BookingController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get a specific booking by ID' })
-  @ApiResponse({
-    status: 200,
-    description: 'Booking retrieved successfully',
-    type: Booking,
-  })
-  @ApiResponse({ status: 404, description: 'Booking not found' })
+  @FindSingleBookingDocs()
   async findOne(
     @Param('id', ParseUUIDPipe) id: string,
     @Request() req: any,
@@ -130,14 +89,7 @@ export class BookingController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Update a booking' })
-  @ApiResponse({
-    status: 200,
-    description: 'Booking updated successfully',
-    type: Booking,
-  })
-  @ApiResponse({ status: 400, description: 'Bad request' })
-  @ApiResponse({ status: 404, description: 'Booking not found' })
+  @UpdateSingleBookingDocs()
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateBookingDto: UpdateBookingDto,
@@ -147,12 +99,7 @@ export class BookingController {
   }
 
   @Patch(':id/status')
-  @ApiOperation({ summary: 'Update booking status' })
-  @ApiResponse({
-    status: 200,
-    description: 'Booking status updated successfully',
-    type: Booking,
-  })
+  @UpdateBookingStatusDocs()
   async updateStatus(
     @Param('id', ParseUUIDPipe) id: string,
     @Body('status') status: BookingStatus,
@@ -162,9 +109,7 @@ export class BookingController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete a booking' })
-  @ApiResponse({ status: 200, description: 'Booking deleted successfully' })
-  @ApiResponse({ status: 404, description: 'Booking not found' })
+  @DeleteSingleBookingDocs()
   async remove(
     @Param('id', ParseUUIDPipe) id: string,
     @Request() req: any,

@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Query, ParseIntPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
-import { JobService } from '../../../job/src/job.service';
+import { JobService } from './job.service';
 
 @ApiTags('Job Processing')
 @Controller('job')

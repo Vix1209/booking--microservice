@@ -4,6 +4,9 @@
 FROM node:18-alpine AS base
 WORKDIR /app
 
+# Install build dependencies for native modules like argon2
+RUN apk add --no-cache python3 make g++
+
 # Copy package files
 COPY package*.json ./
 
@@ -35,6 +38,9 @@ RUN npm run build
 # Production stage
 FROM node:18-alpine AS production
 WORKDIR /app
+
+# Install runtime dependencies for native modules
+RUN apk add --no-cache python3 make g++
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs

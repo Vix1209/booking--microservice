@@ -2,737 +2,367 @@
 
 A comprehensive booking management system built with NestJS, featuring real-time notifications, background job processing, and a robust microservices architecture.
 
-## Features
+## 1. Assumptions & Decisions
 
-- **Booking Management**: Create, read, update, and delete bookings
-- **Real-time Notifications**: WebSocket-based notifications for booking events
-- **Background Jobs**: Automated reminder system using Bull queues
-- **Authentication**: JWT-based authentication with role-based access
-- **Microservices Architecture**: Separate services for booking and job processing
-- **Database**: PostgreSQL with TypeORM for data persistence
-- **Caching**: Redis for caching and job queue management
-- **API Documentation**: Swagger/OpenAPI documentation
-- **Testing**: Unit tests and E2E tests
-- **Containerization**: Docker and Docker Compose support
+### Architecture Decisions
+- **Microservices Pattern**: Separated booking logic and job processing into distinct services for better scalability and maintainability
+- **NestJS Framework**: Chosen for its TypeScript support, decorator-based architecture, and built-in dependency injection
+- **PostgreSQL Database**: Selected for ACID compliance and complex query support needed for booking relationships
+- **Redis**: Used for both caching and job queue management to improve performance and handle background tasks
+- **JWT Authentication**: Implemented stateless authentication with refresh tokens for security and scalability
+- **WebSocket Integration**: Real-time notifications for immediate booking updates and reminders
 
-## Architecture
+### Technical Assumptions
+- Users need real-time updates for booking changes
+- System should handle concurrent booking requests gracefully
+- Background job processing is essential for reminder notifications
+- API should be RESTful and well-documented
+- System should be containerized for easy deployment
+- Both development and production environments need different configurations
 
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│  Booking API    │    │   Job Service   │    │   WebSocket     │
-│   (Port 5000)   │    │   (Port 5001)   │    │   (Port 3001)   │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         └───────────┬───────────┴───────────┬───────────┘
-                     │                       │
-         ┌─────────────────┐    ┌─────────────────────────┐
-         │  Redis (Cloud)  │    │   PostgreSQL (Cloud)   │
-         │  Job Queues &   │    │     Main Database       │
-         │    Caching      │    │                         │
-         └─────────────────┘    └─────────────────────────┘
-```
+### Design Decisions
+- **Role-based Access Control**: Implemented to support different user types (admin, user)
+- **Pagination**: Added for efficient handling of large datasets
+- **Error Handling**: Comprehensive error handling with proper HTTP status codes
+- **Validation**: Input validation using class-validator for data integrity
+- **Docker Profiles**: Separate development and production configurations
+- **Nginx Proxy**: Used for routing and load balancing in containerized environment
 
-### Docker Architecture
 
-#### Development Environment
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Docker Network                           │
-│                                                             │
-│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐      │
-│  │   Nginx     │    │  Booking    │    │    Job      │      │
-│  │   :80       │────│  Service    │    │  Service    │      │
-│  │             │    │   :5000     │    │   :5001     │      │
-│  └─────────────┘    └─────────────┘    └─────────────┘      │
-│         │                   │                   │           │
-│         └───────────────────┼───────────────────┘           │
-│                             │                               │
-│  ┌─────────────┐    ┌─────────────┐                         │
-│  │ PostgreSQL  │    │    Redis    │                         │
-│  │   :5432     │    │   :6379     │                         │
-│  │             │    │             │                         │
-│  └─────────────┘    └─────────────┘                         │
-└─────────────────────────────────────────────────────────────┘
-```
+## 2. Setup Instructions
 
-#### Production Environment
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Docker Network                           │
-│                                                             │
-│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐      │
-│  │ Nginx Prod  │    │  Booking    │    │    Job      │      │
-│  │   :80       │────│ Service Prod│    │Service Prod │      │
-│  │             │    │   :5000     │    │   :5001     │      │
-│  └─────────────┘    └─────────────┘    └─────────────┘      │
-│         │                   │                   │           │
-│         └───────────────────┼───────────────────┘           │
-│                             │                               │
-│                    ┌─────────────────┐                      │
-│                    │ External Cloud  │                      │
-│                    │   Databases     │                      │
-│                    │ (PostgreSQL +   │                      │
-│                    │     Redis)      │                      │
-│                    └─────────────────┘                      │
-└─────────────────────────────────────────────────────────────┘
-```
-
-## Prerequisites
-
+### Prerequisites
 - Docker Engine 20.10+
 - Docker Compose 2.0+
 - 4GB+ available RAM
 - 2GB+ available disk space
 - Node.js 18+ (for local development)
-- PostgreSQL 15+ (if running locally)
-- Redis 7+ (if running locally)
+- Git
 
-## 🚀 Quick Start with Docker
+### Environment Configuration
 
-### Development Mode (with local databases)
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd booking-microservice
+   ```
+
+2. **Environment Variables Setup**
+   ```bash
+   cp .env.example .env
+   ```
+   
+   **Required Environment Variables:**
+   
+   | Variable | Description | Default/Example |
+   |----------|-------------|----------------|
+   | `DATABASE_URL` | PostgreSQL connection string | `postgresql://postgres:password@postgres:5432/booking_db` |
+   | `REDIS_URL` | Redis connection string | `redis://localhost:6379` |
+   | `JWT_SECRET_KEY` | JWT signing secret (64+ chars) | `your-jwt-secret-key` |
+   | `REFRESH_JWT_SECRET_KEY` | Refresh token secret | `your-refresh-jwt-secret-key` |
+   | `NODE_ENV` | Environment mode | `development` or `production` |
+   | `PORT` | Main API service port | `5000` |
+   | `JOB_PORT` | Job service port | `5001` |
+
+### Docker Setup Options
+
+#### Option 1: Development Mode (Recommended for local development)
+- Includes local PostgreSQL and Redis containers
+- Hot reload enabled
+- Debug logging
+- Swagger UI accessible
 
 ```bash
-# Clone the repository
-git clone <repository-url>
-cd booking-microservice
-
-# Start all services in development mode
+# Start development environment
 docker compose up
 
-# Access the application
-# - API Endpoints: http://localhost/api/
-# - Job Service: http://localhost/jobs/
+# Access points:
+# - API: http://localhost/api/
+# - Jobs: http://localhost/jobs/
 # - WebSocket: http://localhost/ws/
-# - Health Check: http://localhost/health
+# - Health: http://localhost/health
 ```
 
-### Production Mode (with cloud databases)
+#### Option 2: Production Mode (For production deployment)
+- Uses external cloud databases
+- Optimized builds
+- Enhanced security
+- Production nginx configuration
 
 ```bash
-# Environment Setup
-cp .env.example .env
-# Edit .env file with your cloud database URLs and configuration
-
-# Start all services in production mode
-docker compose --profile prod up -d
-
-# Access the application
-# - API Endpoints: http://localhost/api/ (via nginx)
-# - Job Service: http://localhost/jobs/ (via nginx)
-# - Health Check: http://localhost/health
-
-# View logs
-docker compose --profile prod logs -f
-
-# Stop services
-docker compose --profile prod down
-```
-
-## 🔧 Docker Configuration
-
-### Service Profiles
-
-**Development Profile (default)**
-- Activated by: `docker compose up` (no profile flag needed)
-- Local PostgreSQL and Redis containers included
-- Hot reload enabled with volume mounts
-- Development nginx configuration (`nginx.conf`)
-- Services expose ports: 5000 (booking), 5001 (job), 80 (nginx)
-- Debug logging enabled
-- CORS enabled for development
-- Uses `nginx-dev`, `postgres`, `redis`, `booking-service`, `job-service`
-
-**Production Profile (`--profile prod`)**
-- Activated by: `docker compose --profile prod up`
-- External cloud databases (PostgreSQL + Redis) - no local DB containers
-- Optimized production builds
-- Production nginx configuration (`nginx.prod.conf`)
-- Only nginx exposes port 80 externally, services run internally
-- Enhanced security headers and attack protection
-- Stricter rate limiting (5r/s for API, 2r/s for auth)
-- Production logging and error handling
-- Hidden server tokens and version information
-- Uses `nginx-prod`, `booking-service-prod`, `job-service-prod`
-
-### Service Routing
-
-#### Development (nginx.conf)
-
-| Route     | Service         | Internal Port | Description               |
-| --------- | --------------- | ------------- | ------------------------- |
-| `/api/*`  | booking-service | 5000          | Main API endpoints        |
-| `/jobs/*` | job-service     | 5001          | Background job management |
-| `/ws/*`   | booking-service | 5000          | WebSocket connections     |
-| `/health` | nginx           | -             | Health check endpoint     |
-
-#### Production (nginx.prod.conf)
-
-| Route     | Service              | Internal Port | External Port | Description               |
-| --------- | -------------------- | ------------- | ------------- | ------------------------- |
-| `/api/*`  | booking-service-prod | 5000          | 80            | Main API endpoints        |
-| `/jobs/*` | job-service-prod     | 5001          | 80            | Background job management |
-| `/ws/*`   | booking-service-prod | 5000          | 80            | WebSocket connections     |
-| `/health` | nginx                | -             | 80            | Health check endpoint     |
-
-## 📝 Docker Commands
-
-### Development Workflow
-
-```bash
-# Start development environment (default profile)
-docker compose up
-
-# Start in background
-docker compose up -d
-
-# View logs
-docker compose logs -f
-
-# View specific service logs
-docker compose logs -f booking-service
-docker compose logs -f job-service
-docker compose logs -f postgres
-docker compose logs -f redis
-
-# Stop services
-docker compose down
-
-# Rebuild and start
-docker compose up --build
-
-# Remove volumes (reset databases)
-docker compose down -v
-```
-
-### Production Workflow
-
-```bash
-# Build production images
-docker compose --profile prod build
+# Configure production environment
+# Edit .env with production database URLs
 
 # Start production environment
 docker compose --profile prod up -d
 
-# Check service status
-docker compose --profile prod ps
-
-# View production logs
+# Monitor deployment
 docker compose --profile prod logs -f
-
-# Update production deployment
-docker compose --profile prod pull
-docker compose --profile prod up -d --build
-
-# Stop production services
-docker compose --profile prod down
 ```
 
-### Database Management (Development Only)
+### Security Configuration (Production)
 
-```bash
-# Run database migrations
-docker compose exec booking-service npm run migration:run
+**⚠️ Important: Update these before production deployment:**
 
-# Access PostgreSQL CLI
-docker compose exec postgres psql -U postgres -d booking_db
+- [ ] Set strong `JWT_SECRET_KEY` (64+ characters)
+- [ ] Set strong `REFRESH_JWT_SECRET_KEY`
+- [ ] Configure production database URLs
+- [ ] Set `NODE_ENV=production`
+- [ ] Review and configure CORS origins
+- [ ] Set up SSL/TLS certificates
 
-# Access Redis CLI
-docker compose exec redis redis-cli
 
-# Backup database
-docker compose exec postgres pg_dump -U postgres booking_db > backup.sql
 
-# Restore database
-docker compose exec -T postgres psql -U postgres booking_db < backup.sql
-```
+## 3. How to Run Locally & Test
 
-### Debugging
+### Option A: Docker Development (Recommended)
 
-```bash
-# Access service shell
-docker compose exec booking-service sh
-docker compose exec job-service sh
-
-# Check service health endpoints
-curl http://localhost/health                    # Nginx health
-curl http://localhost/api/                      # Booking API
-curl http://localhost/jobs/health               # Job service health
-
-# Note: In production, services are only accessible through nginx proxy
-# Direct service access is not exposed externally for security
-
-# Monitor resource usage
-docker stats
-
-# View container details
-docker compose ps
-docker inspect booking-service
-```
-
-## Local Development Setup
-
-1. **Install dependencies**
-
+1. **Quick Start**
    ```bash
+   # Clone and start
+   git clone <repository-url>
+   cd booking-microservice
+   docker compose up -d
+   
+   # Verify services are running
+   curl http://localhost/health
+   ```
+
+2. **Access Points**
+   - **API Documentation**: http://localhost/api/ (Swagger UI)
+   - **Main API**: http://localhost/api/booking
+   - **Job Management**: http://localhost/jobs/
+   - **WebSocket**: http://localhost/ws/
+   - **Health Check**: http://localhost/health
+
+3. **Database Setup**
+   ```bash
+   # Run migrations (if needed)
+   docker compose exec booking-service npm run migration:run
+   
+   # Access database
+   docker compose exec postgres psql -U postgres -d booking_db
+   ```
+
+### Option B: Native Development
+
+1. **Prerequisites Setup**
+   ```bash
+   # Install dependencies
    npm install
+   
+   # Start databases only
+   docker compose up postgres redis -d
    ```
 
-2. **Start PostgreSQL and Redis**
-
-   ```bash
-   docker compose up
-   ```
-
-3. **Environment configuration**
-
+2. **Environment Configuration**
    ```bash
    cp .env.example .env
-   # Configure your local environment variables
+   # Edit .env for local development
    ```
 
-4. **Run database migrations**
-
+3. **Database Migration**
    ```bash
    npm run migration:run
    ```
 
-5. **Start the applications**
-
+4. **Start Services**
    ```bash
    # Terminal 1 - Booking Service
    npm run start:dev booking-microservice
-
-   # Terminal 2 - Job Service
+   
+   # Terminal 2 - Job Service  
    npm run start:dev job
    ```
 
-## Environment Variables
+### Testing
 
-| Variable                      | Description                    | Default                                                |
-| ----------------------------- | ------------------------------ | ------------------------------------------------------ |
-| `DATABASE_URL`                | PostgreSQL database URL        | postgresql://postgres:password@postgres:5432/booking_db |
-| `POSTGRES_SYNC`               | Enable TypeORM synchronization | true (dev), false (prod)                               |
-| `REDIS_URL`                   | Redis URL                      | redis://localhost:6379                                 |
-| `JWT_SECRET_KEY`              | JWT signing secret             | your-jwt-secret-key                                    |
-| `JWT_EXPIRATION_TIME`         | JWT expiration time            | 15m                                                    |
-| `REFRESH_JWT_SECRET_KEY`      | Refresh JWT signing secret     | your-refresh-jwt-secret-key                            |
-| `REFRESH_JWT_EXPIRATION_TIME` | Refresh JWT expiration time    | 7d                                                     |
-| `PORT`                        | Main API service port          | 5000                                                   |
-| `JOB_PORT`                    | Job service port               | 5001                                                   |
-| `NODE_ENV`                    | Node environment               | development                                            |
-| `WS_PORT`                     | WebSocket port                 | 3001                                                   |
-| `WS_CORS_ORIGIN`              | WebSocket CORS origin          | http://localhost:3000                                  |
-
-## API Endpoints
-
-### Authentication
-
-- `POST /auth/register` - Register a new user
-- `POST /auth/login` - Login user
-- `POST /auth/refresh` - Refresh JWT token
-
-### Bookings
-
-- `GET /booking` - Get all bookings (paginated)
-- `POST /booking` - Create a new booking
-- `GET /booking/:id` - Get booking by ID
-- `PATCH /booking/:id` - Update booking
-- `DELETE /booking/:id` - Delete booking
-- `GET /booking/upcoming` - Get upcoming bookings
-- `GET /booking/past` - Get past bookings
-- `PATCH /booking/:id/status` - Update booking status
-
-### Job Management
-
-- `GET /jobs/health` - Job service health check
-- `GET /jobs/metrics` - Job queue metrics
-- `GET /jobs/stats` - Queue statistics
-- `POST /jobs/cleanup` - Clean up completed jobs
-
-## WebSocket Events
-
-The application supports real-time notifications via WebSocket:
-
-### Client Events
-
-- `join-user-room` - Join user-specific notification room
-- `leave-user-room` - Leave user-specific notification room
-
-### Server Events
-
-- `booking-created` - New booking created
-- `booking-updated` - Booking updated
-- `booking-deleted` - Booking deleted
-- `booking-reminder` - Booking reminder (10 minutes before)
-- `system-broadcast` - System-wide notifications
-
-## Testing
-
-### Unit Tests
-
+#### Unit Tests
 ```bash
+# Run all unit tests
 npm run test
-```
 
-### E2E Tests
-
-```bash
-npm run test:e2e
-```
-
-### Test Coverage
-
-```bash
+# Run tests with coverage
 npm run test:cov
+
+# Run tests in watch mode
+npm run test:watch
 ```
 
-## Database Migrations
-
-### Generate Migration
-
+#### End-to-End Tests
 ```bash
-npm run migration:generate -- -n MigrationName
+# Run E2E tests
+npm run test:e2e
+
+# Run specific E2E test
+npm run test:e2e -- --testNamePattern="booking"
 ```
 
-### Run Migrations
+#### API Testing
 
+1. **Using Swagger UI** (Recommended)
+   - Navigate to http://localhost/api/
+   - Use interactive API documentation
+   - Test authentication and booking endpoints
+
+2. **Using cURL**
+   ```bash
+   # Health check
+   curl http://localhost/health
+   
+   # Register user
+   curl -X POST http://localhost/api/auth/register \
+     -H "Content-Type: application/json" \
+     -d '{"email":"test@example.com","password":"password123","name":"Test User"}'
+   
+   # Login
+   curl -X POST http://localhost/api/auth/login \
+     -H "Content-Type: application/json" \
+     -d '{"email":"test@example.com","password":"password123"}'
+   
+   # Create booking (replace TOKEN with JWT from login)
+   curl -X POST http://localhost/api/booking \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer TOKEN" \
+     -d '{"title":"Test Booking","startTime":"2024-12-25T10:00:00Z","endTime":"2024-12-25T11:00:00Z"}'
+   ```
+
+#### WebSocket Testing
 ```bash
-npm run migration:run
+# Install wscat for WebSocket testing
+npm install -g wscat
+
+# Connect to WebSocket
+wscat -c ws://localhost/ws/
+
+# Send join room event
+{"event":"join-user-room","data":{"userId":"your-user-id"}}
 ```
 
-### Revert Migration
-
-```bash
-npm run migration:revert
-```
-
-## 📊 Monitoring and Health Checks
-
-### Built-in Health Checks
-
-```bash
-# Service health (both environments)
-curl http://localhost/health
-
-# Development specific
-curl http://localhost/api/                      # Swagger UI
-curl http://localhost/jobs/health               # Job metrics
-
-# Production specific
-curl http://localhost:5002/api/                 # Direct API
-curl http://localhost:5003/job/health           # Direct job service
-```
-
-### Docker Health Status
-
-```bash
-# Check container health
-docker compose ps
-docker compose --profile prod ps
-
-# View health check logs
-docker inspect --format='{{json .State.Health}}' booking-service
-docker inspect --format='{{json .State.Health}}' booking-service-prod
-```
-
-### Production Monitoring
-
-```bash
-# Container resource usage
-docker stats
-
-# Service logs
-docker compose --profile prod logs --tail=100 -f
-
-# Nginx access logs
-docker compose --profile prod exec nginx-prod tail -f /var/log/nginx/access.log
-
-# Application logs
-docker compose --profile prod logs -f booking-service-prod
-docker compose --profile prod logs -f job-service-prod
-```
-
-### Health Check Endpoints
-
-- Booking Service: `GET /health`
-- Job Service: `GET /jobs/health`
-
-### Metrics
-
-- Job Queue Metrics: `GET /jobs/metrics`
-- Queue Statistics: `GET /jobs/stats`
-
-## 🔄 Deployment Workflow
-
-### Development Setup
-
-```bash
-# Clone repository
-git clone <repository-url>
-cd booking-microservice
-
-# Start development environment
-docker compose up -d
-
-# Run initial setup (if needed)
-docker compose exec booking-service npm run migration:run
-
-# Development ready!
-echo "Development environment ready at http://localhost"
-```
-
-### Production Deployment
-
-```bash
-# Prepare environment file
-cp .env.example .env
-# Edit .env with production values
-
-# Build and deploy
-docker compose --profile prod build
-docker compose --profile prod up -d
-
-# Verify deployment
-curl http://localhost/health
-docker compose --profile prod ps
-
-# Production ready!
-echo "Production environment ready at http://localhost"
-```
-
-### Docker Production Build
-
-```bash
-# Build production images
-docker compose --profile prod build
-
-# Deploy to production
-docker compose --profile prod up -d
-```
-
-### Environment Considerations
-
-- Use strong JWT secrets
-- Configure proper database credentials
-- Set up SSL/TLS certificates
-- Configure proper CORS origins
-- Set up monitoring and logging
-- Configure backup strategies
-
-## 🔒 Security Considerations
-
-### Development
-
-- Uses standard passwords (for convenience)
-- CORS enabled for all origins
-- Debug logging enabled
-- Swagger UI accessible
-- No SSL/TLS required
-
-### Production
-
-- **MUST** update `.env` with secure credentials
-- **MUST** use strong JWT secrets (64+ characters)
-- **MUST** configure proper CORS origins
-- Enhanced security headers in nginx
-- Stricter rate limiting
-- Hidden server information
-- **SHOULD** add SSL/TLS termination
-- **SHOULD** implement proper monitoring
-
-### Production Security Checklist
-
-- [ ] Update all default passwords in `.env`
-- [ ] Set strong JWT_SECRET_KEY (64+ characters)
-- [ ] Set strong REFRESH_JWT_SECRET_KEY
-- [ ] Configure proper DATABASE_URL for cloud database
-- [ ] Configure proper REDIS_URL for cloud Redis
-- [ ] Set NODE_ENV=production
-- [ ] Review nginx rate limiting (5r/s API, 2r/s auth)
-- [ ] Test security headers and CSP policies
-- [ ] Implement SSL/TLS certificates
-- [ ] Set up monitoring and alerting
-- [ ] Verify attack pattern blocking is working
-
-### Security Features
-
-- JWT-based authentication
-- Password hashing with bcrypt
-- Input validation with class-validator
-- SQL injection prevention with TypeORM
-- Rate limiting via Nginx (dev: 10r/s API, 5r/s auth; prod: 5r/s API, 2r/s auth)
-- CORS configuration
-- Security headers (enhanced in production)
-- Attack pattern blocking (production only)
-- Hidden server information (production only)
-- Connection limiting (production only)
-
-## 🚀 Performance Optimizations
-
-### Development
-
-- Use `.dockerignore` to exclude unnecessary files
-- Mount only necessary directories for hot reload
-- Use development Docker target for faster builds
-- Keep development databases small
-
-### Production
-
-- Use production-optimized images
-- Enable gzip compression (handled by nginx)
-- Configure proper resource limits
-- Use external databases for scalability
-- Implement connection pooling
-- Use Redis for caching and sessions
-
-### General Optimizations
-
-- Database indexing for optimal query performance
-- Redis caching for frequently accessed data
-- Connection pooling for database connections
-- Gzip compression via Nginx
-- Efficient pagination for large datasets
-- Background job processing for non-blocking operations
-
-## 🔍 Troubleshooting
-
-### Common Issues
-
-**Services won't start**
-
-```bash
-# Check logs for errors
-docker compose logs
-
-# Check specific profile
-docker compose --profile prod logs
-
-# Rebuild containers
-docker compose down
-docker compose up --build
-```
-
-**Database connection errors (Development)**
-
-```bash
-# Ensure databases are healthy
-docker compose ps
-
-# Check database logs
-docker compose logs postgres
-docker compose logs redis
-
-# Verify credentials match docker-compose.yml:
-# POSTGRES_DB: booking_db
-# POSTGRES_USER: postgres  
-# POSTGRES_PASSWORD: password
-# DATABASE_URL: postgresql://postgres:password@postgres:5432/booking_db
-
-# Reset database volumes
-docker compose down -v
-docker compose up
-```
-
-**Port conflicts**
-
-```bash
-# Check what's using ports
-netstat -tulpn | grep :80
-netstat -tulpn | grep :5000
-
-# Development uses: 80, 5000, 5001
-# Production uses: 80 (nginx only, services run internally)
-```
-
-**Hot reload not working (Development)**
-
-```bash
-# Ensure volume mounts are correct
-docker compose config
-
-# Check file permissions
-ls -la
-
-# Restart development services
-docker compose restart booking-service job-service
-```
-
-**Production services not starting**
-
-```bash
-# Verify .env file exists and has correct values
-cat .env
-
-# Check if external databases are accessible
-# Test PostgreSQL connection
-# Test Redis connection
-
-# Check production profile
-docker compose --profile prod config
-```
-
-**Legacy Issues**
-
-1. **Database Connection Issues**
-   - Verify PostgreSQL is running
-   - Check database credentials
-   - Ensure database exists
-
-2. **Redis Connection Issues**
-   - Verify Redis is running
-   - Check Redis configuration
-   - Verify network connectivity
-
-3. **WebSocket Connection Issues**
-   - Check CORS configuration
-   - Verify WebSocket port is accessible
-   - Check firewall settings
-
-4. **Crypto Module Issues ("crypto is not defined")**
-   - This error occurs when argon2 (used for password hashing) cannot access Node.js crypto module
-   - The Dockerfile includes necessary build dependencies (python3, make, g++, linux-headers)
-   - If running locally without Docker, ensure Node.js has crypto support enabled
-   - For Alpine Linux containers, the required build tools are automatically installed
-
-### Health Checks
-
-| Environment | Service     | Endpoint                           | Expected Response  |
-| ----------- | ----------- | ---------------------------------- | ------------------ |
-| Dev         | Nginx       | `http://localhost/health`          | `healthy`          |
-| Dev         | Booking API | `http://localhost/api/`            | Swagger UI         |
-| Dev         | Job Service | `http://localhost/jobs/health`     | JSON health status |
-| Prod        | Nginx       | `http://localhost/health`          | `healthy`          |
-| Prod        | Booking API | `http://localhost/api/`            | API response       |
-| Prod        | Job Service | `http://localhost/jobs/health`     | JSON health status |
-
-### Logs
-
-```bash
-# View application logs
-docker compose logs booking-service
-docker compose logs job-service
-
-# Follow logs in real-time
-docker compose logs -f booking-service
-
-# Production logs
-docker compose --profile prod logs --tail=100 -f
-
-# Nginx access logs
-docker compose --profile prod exec nginx-prod tail -f /var/log/nginx/access.log
-```
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Ensure all tests pass
-6. Submit a pull request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
+### Development Workflow
+
+1. **Making Changes**
+   - Code changes auto-reload in development mode
+   - Database changes require migration generation
+   - New dependencies require container rebuild
+
+2. **Database Changes**
+   ```bash
+   # Generate migration
+   npm run migration:generate -- -n MigrationName
+   
+   # Run migration
+   npm run migration:run
+   
+   # Revert migration
+   npm run migration:revert
+   ```
+
+3. **Debugging**
+   ```bash
+   # View logs
+   docker compose logs -f booking-service
+   docker compose logs -f job-service
+   
+   # Access container shell
+   docker compose exec booking-service sh
+   
+   # Monitor job queues
+   curl http://localhost/jobs/metrics
+   ```
+
+## 4. What You'd Improve with +4 Hours
+
+### High Priority Improvements
+
+#### 1. Enhanced Monitoring & Observability (1.5 hours)
+- **Metrics Collection**: Implement Prometheus metrics for API response times, database query performance, and job queue statistics
+- **Distributed Tracing**: Add OpenTelemetry for request tracing across microservices
+- **Health Checks**: Enhance health endpoints with dependency checks (database connectivity, Redis availability)
+- **Alerting**: Set up basic alerting rules for service failures and performance degradation
+
+#### 2. Advanced Security Features (1 hour)
+- **Rate Limiting**: Implement more granular rate limiting per user/IP with Redis-backed counters
+- **API Key Management**: Add API key authentication for service-to-service communication
+- **Input Sanitization**: Enhanced XSS and injection attack prevention
+- **Audit Logging**: Comprehensive audit trail for all booking operations
+
+#### 3. Performance Optimizations (1 hour)
+- **Database Optimization**: Add database indexes for common query patterns, implement query optimization
+- **Caching Strategy**: Implement Redis caching for frequently accessed booking data
+- **Connection Pooling**: Optimize database connection pool settings
+- **Response Compression**: Implement response compression for large payloads
+
+#### 4. Testing & Quality Assurance (30 minutes)
+- **Integration Tests**: Add comprehensive integration tests for microservice communication
+- **Load Testing**: Implement basic load testing with k6 or Artillery
+- **Contract Testing**: Add API contract testing between services
+- **Test Data Management**: Automated test data seeding and cleanup
+
+### Medium Priority Improvements
+
+#### 5. Developer Experience Enhancements
+- **Hot Reload**: Improve development hot reload performance
+- **Debug Configuration**: Add VS Code debug configurations
+- **API Documentation**: Enhanced Swagger documentation with examples
+- **Development Scripts**: Additional npm scripts for common development tasks
+
+#### 6. Operational Improvements
+- **Graceful Shutdown**: Implement proper graceful shutdown handling
+- **Configuration Management**: Environment-specific configuration validation
+- **Backup Strategy**: Automated database backup procedures
+- **Log Aggregation**: Structured logging with correlation IDs
+
+### Future Considerations (Beyond 4 hours)
+
+#### Scalability
+- **Horizontal Scaling**: Kubernetes deployment configurations
+- **Database Sharding**: Strategy for handling large-scale booking data
+- **Event Sourcing**: Consider event sourcing for booking state management
+- **CQRS Pattern**: Separate read/write models for better performance
+
+#### Advanced Features
+- **Multi-tenancy**: Support for multiple organizations
+- **Advanced Notifications**: Email/SMS notifications integration
+- **Booking Conflicts**: Advanced conflict resolution algorithms
+- **Analytics**: Booking analytics and reporting features
+
+#### Infrastructure
+- **CI/CD Pipeline**: Automated testing and deployment
+- **Infrastructure as Code**: Terraform or CloudFormation templates
+- **Service Mesh**: Istio for advanced traffic management
+- **Disaster Recovery**: Multi-region deployment strategy
+
+### Implementation Priority Matrix
+
+| Improvement | Impact | Effort | Priority |
+|-------------|--------|--------|---------|
+| Monitoring & Observability | High | Medium | 1 |
+| Security Enhancements | High | Low | 2 |
+| Performance Optimization | Medium | Medium | 3 |
+| Testing Improvements | Medium | Low | 4 |
+| Developer Experience | Low | Low | 5 |
+
+---
+
+## Additional Resources
+
+### API Documentation
+Once running, visit http://localhost/api/ for interactive Swagger documentation.
+
+### Architecture Overview
+The system uses a microservices architecture with the following components:
+- **Booking Service**: Main API for booking management
+- **Job Service**: Background job processing for reminders
+- **PostgreSQL**: Primary data store
+- **Redis**: Caching and job queue management
+- **Nginx**: Reverse proxy and load balancer
+
+### Key Features
+- JWT-based authentication with refresh tokens
+- Real-time WebSocket notifications
+- Background job processing for reminders
+- Role-based access control
+- Comprehensive API documentation
+- Docker containerization with development/production profiles

@@ -9,6 +9,7 @@ import {
   OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { Role } from 'types/role.types';
 
 @Entity('users')
 export class User {
@@ -30,8 +31,8 @@ export class User {
   @Column({ default: 'active' })
   status: 'active' | 'suspended' | 'deleted';
 
-  @Column({ nullable: true, type: 'varchar' })
-  location: string | null;
+  @Column({ type: 'enum', enum: Role, default: Role.ADMIN })
+  role: Role;
 
   @CreateDateColumn({ type: 'timestamp' })
   createdAt: Date;

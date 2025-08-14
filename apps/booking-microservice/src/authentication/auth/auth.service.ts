@@ -69,6 +69,7 @@ export class AuthService {
       email: createUserDto.email,
       auth: {
         hashedPassword: createUserDto.password,
+        role: createUserDto.role,
       },
     });
 

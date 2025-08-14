@@ -103,13 +103,18 @@ services:
       # Hot reload for development
       - .:/app
       - /app/node_modules
-    env_file:
-      - .env
     environment:
       - NODE_ENV=development
-      - POSTGRES_CLOUD_DB_URL=postgresql://booking_user:booking_password@postgres:5432/booking_db
-      - POSTGRES_SYNC=true
+      - PORT=5000
+      - DATABASE_URL=postgresql://booking_user:booking_password@postgres:5432/booking_db
       - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=your-super-secret-jwt-key-for-development
+      - JWT_EXPIRES_IN=1d
+      - REFRESH_JWT_SECRET=your-super-secret-refresh-jwt-key-for-development
+      - REFRESH_JWT_EXPIRES_IN=7d
+      - WS_CORS_ORIGIN=http://localhost:3000
+      - CORS_ENABLED=true
+      - SWAGGER_ENABLED=true
     networks:
       - booking-network
     restart: unless-stopped
@@ -119,7 +124,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ['CMD', 'wget', '--quiet', '--tries=1', '--spider', 'http://localhost:5000/api/']
+      test: ['CMD', 'wget', '--quiet', '--tries=1', '--spider', 'http://localhost:5000/']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -139,13 +144,15 @@ services:
     volumes:
       - .:/app
       - /app/node_modules
-    env_file:
-      - .env
     environment:
       - NODE_ENV=development
-      - POSTGRES_CLOUD_DB_URL=postgresql://booking_user:booking_password@postgres:5432/booking_db
-      - POSTGRES_SYNC=true
+      - JOB_PORT=5001
+      - DATABASE_URL=postgresql://booking_user:booking_password@postgres:5432/booking_db
       - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=your-super-secret-jwt-key-for-development
+      - JWT_EXPIRES_IN=1d
+      - REFRESH_JWT_SECRET=your-super-secret-refresh-jwt-key-for-development
+      - REFRESH_JWT_EXPIRES_IN=7d
     networks:
       - booking-network
     restart: unless-stopped
@@ -171,14 +178,14 @@ services:
     container_name: booking-service-prod
     command: ['node', 'dist/apps/booking-microservice/main']
     ports:
-      - '5002:5000'  # Fixed: Different external port
+      - '5000:5000'
     env_file:
       - .env
     networks:
       - booking-network
     restart: unless-stopped
     healthcheck:
-      test: ['CMD', 'wget', '--quiet', '--tries=1', '--spider', 'http://localhost:5000/api/']
+      test: ['CMD', 'wget', '--quiet', '--tries=1', '--spider', 'http://localhost:5000/']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -194,7 +201,7 @@ services:
     container_name: job-service-prod
     command: ['node', 'dist/apps/job/main']
     ports:
-      - '5003:5001'  # Fixed: Different external port
+      - '5001:5001'
     env_file:
       - .env
     networks:

@@ -63,7 +63,7 @@ A comprehensive booking management system built with NestJS, featuring real-time
 
 ## Prerequisites
 
-- Node.js 18+ 
+- Node.js 18+
 - Docker and Docker Compose
 - PostgreSQL 15+ (if running locally)
 - Redis 7+ (if running locally)
@@ -71,25 +71,28 @@ A comprehensive booking management system built with NestJS, featuring real-time
 ## Quick Start with Docker
 
 1. **Clone the repository**
+
    ```bash
    git clone <repository-url>
    cd booking-microservice
    ```
 
 2. **Environment Setup**
+
    ```bash
    cp .env.example .env
    # Edit .env file with your cloud database URLs and configuration
    ```
 
 3. **Start the application**
+
    ```bash
    # Production mode
    docker-compose up -d
-   
+
    # Or use the helper script (Windows)
    .\docker-scripts.ps1 start
-   
+
    # Or use the helper script (Linux/macOS/WSL)
    ./docker-scripts.sh start
    ```
@@ -118,16 +121,19 @@ docker-compose --profile dev up -d booking-dev
 Use the provided scripts for common Docker operations:
 
 **Windows (PowerShell):**
+
 ```powershell
 .\docker-scripts.ps1 [command]
 ```
 
 **Linux/macOS/WSL (Bash):**
+
 ```bash
 ./docker-scripts.sh [command]
 ```
 
 Available commands:
+
 - `build` - Build the Docker image
 - `start` - Start in production mode
 - `dev` - Start in development mode
@@ -143,60 +149,67 @@ For detailed Docker setup instructions, see [DOCKER.md](DOCKER.md).
 ## Local Development Setup
 
 1. **Install dependencies**
+
    ```bash
    npm install
    ```
 
 2. **Start PostgreSQL and Redis**
+
    ```bash
    docker-compose up postgres redis -d
    ```
 
 3. **Environment configuration**
+
    ```bash
    cp .env.example .env
    # Configure your local environment variables
    ```
 
 4. **Run database migrations**
+
    ```bash
    npm run migration:run
    ```
 
 5. **Start the applications**
+
    ```bash
    # Terminal 1 - Booking Service
    npm run start:dev booking-microservice
-   
+
    # Terminal 2 - Job Service
    npm run start:dev job
    ```
 
 ## Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|----------|
-| `POSTGRES_CLOUD_DB_URL` | PostgreSQL cloud database URL | postgresql://username:password@localhost:5432/quivy_db |
-| `POSTGRES_SYNC` | Enable TypeORM synchronization | true (dev), false (prod) |
-| `REDIS_URL` | Redis cloud URL | redis://localhost:6379 |
-| `JWT_SECRET_KEY` | JWT signing secret | your-jwt-secret-key |
-| `JWT_EXPIRATION_TIME` | JWT expiration time | 15m |
-| `REFRESH_JWT_SECRET_KEY` | Refresh JWT signing secret | your-refresh-jwt-secret-key |
-| `REFRESH_JWT_EXPIRATION_TIME` | Refresh JWT expiration time | 7d |
-| `PORT` | Main API service port | 5000 |
-| `JOB_PORT` | Job service port | 5001 |
-| `NODE_ENV` | Node environment | development |
-| `WS_PORT` | WebSocket port | 3001 |
-| `WS_CORS_ORIGIN` | WebSocket CORS origin | http://localhost:3000 |
+| Variable                      | Description                    | Default                                                |
+| ----------------------------- | ------------------------------ | ------------------------------------------------------ |
+| `DATABASE_URL`                | PostgreSQL cloud database URL  | postgresql://username:password@localhost:5432/quivy_db |
+| `POSTGRES_SYNC`               | Enable TypeORM synchronization | true (dev), false (prod)                               |
+| `REDIS_URL`                   | Redis cloud URL                | redis://localhost:6379                                 |
+| `JWT_SECRET_KEY`              | JWT signing secret             | your-jwt-secret-key                                    |
+| `JWT_EXPIRATION_TIME`         | JWT expiration time            | 15m                                                    |
+| `REFRESH_JWT_SECRET_KEY`      | Refresh JWT signing secret     | your-refresh-jwt-secret-key                            |
+| `REFRESH_JWT_EXPIRATION_TIME` | Refresh JWT expiration time    | 7d                                                     |
+| `PORT`                        | Main API service port          | 5000                                                   |
+| `JOB_PORT`                    | Job service port               | 5001                                                   |
+| `NODE_ENV`                    | Node environment               | development                                            |
+| `WS_PORT`                     | WebSocket port                 | 3001                                                   |
+| `WS_CORS_ORIGIN`              | WebSocket CORS origin          | http://localhost:3000                                  |
 
 ## API Endpoints
 
 ### Authentication
+
 - `POST /auth/register` - Register a new user
 - `POST /auth/login` - Login user
 - `POST /auth/refresh` - Refresh JWT token
 
 ### Bookings
+
 - `GET /booking` - Get all bookings (paginated)
 - `POST /booking` - Create a new booking
 - `GET /booking/:id` - Get booking by ID
@@ -207,6 +220,7 @@ For detailed Docker setup instructions, see [DOCKER.md](DOCKER.md).
 - `PATCH /booking/:id/status` - Update booking status
 
 ### Job Management
+
 - `GET /jobs/health` - Job service health check
 - `GET /jobs/metrics` - Job queue metrics
 - `GET /jobs/stats` - Queue statistics
@@ -217,10 +231,12 @@ For detailed Docker setup instructions, see [DOCKER.md](DOCKER.md).
 The application supports real-time notifications via WebSocket:
 
 ### Client Events
+
 - `join-user-room` - Join user-specific notification room
 - `leave-user-room` - Leave user-specific notification room
 
 ### Server Events
+
 - `booking-created` - New booking created
 - `booking-updated` - Booking updated
 - `booking-deleted` - Booking deleted
@@ -230,16 +246,19 @@ The application supports real-time notifications via WebSocket:
 ## Testing
 
 ### Unit Tests
+
 ```bash
 npm run test
 ```
 
 ### E2E Tests
+
 ```bash
 npm run test:e2e
 ```
 
 ### Test Coverage
+
 ```bash
 npm run test:cov
 ```
@@ -247,16 +266,19 @@ npm run test:cov
 ## Database Migrations
 
 ### Generate Migration
+
 ```bash
 npm run migration:generate -- -n MigrationName
 ```
 
 ### Run Migrations
+
 ```bash
 npm run migration:run
 ```
 
 ### Revert Migration
+
 ```bash
 npm run migration:revert
 ```
@@ -264,16 +286,19 @@ npm run migration:revert
 ## Monitoring and Health Checks
 
 ### Health Check Endpoints
+
 - Booking Service: `GET /health`
 - Job Service: `GET /jobs/health`
 
 ### Metrics
+
 - Job Queue Metrics: `GET /jobs/metrics`
 - Queue Statistics: `GET /jobs/stats`
 
 ## Production Deployment
 
 ### Docker Production Build
+
 ```bash
 # Build production images
 docker-compose build
@@ -283,6 +308,7 @@ docker-compose up -d
 ```
 
 ### Environment Considerations
+
 - Use strong JWT secrets
 - Configure proper database credentials
 - Set up SSL/TLS certificates
@@ -335,6 +361,7 @@ docker-compose up -d
    - For Alpine Linux containers, the required build tools are automatically installed
 
 ### Logs
+
 ```bash
 # View application logs
 docker-compose logs booking-service

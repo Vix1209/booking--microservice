@@ -130,7 +130,7 @@ PORT=5000
 JOB_PORT=5001
 
 # Cloud Database URLs
-POSTGRES_CLOUD_DB_URL=postgres://avnadmin:...@pg-xxx.aivencloud.com:22987/defaultdb
+DATABASE_URL=postgres://avnadmin:...@pg-xxx.aivencloud.com:22987/defaultdb
 REDIS_URL=rediss://red-xxx:...@oregon-keyvalue.render.com:6379
 
 # Security Configuration
